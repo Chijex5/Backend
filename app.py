@@ -32,6 +32,11 @@ mysql = MySQL(app)
 # Secret Key
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({'message': 'Welcome to the Bookstore API! Our Backend is up and runing'}), 200
+
+
 def log_event(user_id, event, metadata=None):
     cursor = mysql.connection.cursor()
     query = "INSERT INTO analytics (user_id, event, metadata) VALUES (%s, %s, %s)"
