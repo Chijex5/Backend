@@ -35,7 +35,8 @@ count = 0
 @app.route('/', methods=['GET'])
 def home():
     count += 1
-    return jsonify({'message': 'Welcome to the Uniboks Backend API! Our Backend is up and runing', count}), 200
+    message = f'Welcome to the Uniboks Backend API! This is for testing our API. We have made {count} succesful calls'
+    return jsonify({'message': message}), 200
 
 
 def log_event(user_id, event, metadata=None):
