@@ -31,10 +31,11 @@ mysql = MySQL(app)
 
 # Secret Key
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-
+count = 0
 @app.route('/', methods=['GET'])
 def home():
-    return jsonify({'message': 'Welcome to the Uniboks Backend API! Our Backend is up and runing'}), 200
+    count += 1
+    return jsonify({'message': 'Welcome to the Uniboks Backend API! Our Backend is up and runing', count}), 200
 
 
 def log_event(user_id, event, metadata=None):
