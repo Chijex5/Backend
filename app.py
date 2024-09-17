@@ -32,11 +32,14 @@ mysql = MySQL(app)
 # Secret Key
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 count = 0
+
 @app.route('/', methods=['GET'])
 def home():
+    global count  # Declare count as global
     count += 1
-    message = f'Welcome to the Uniboks Backend API! This is for testing our API. We have made {count} succesful calls'
+    message = f'Welcome to the Uniboks Backend API! This is for testing our API. We have made {count} successful calls.'
     return jsonify({'message': message}), 200
+
 
 
 def log_event(user_id, event, metadata=None):
