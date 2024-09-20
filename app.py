@@ -1,8 +1,10 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_mail import Mail
 from datetime import datetime
 from flask_mysqldb import MySQL
+from invoice_generator import generate_invoice
+from io import BytesIO
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -41,6 +43,30 @@ def home():
     return jsonify({'message': message}), 200
 
 
+def generate_invoice_number():
+    current_date = datetime.now().strftime('%Y-%m-%d')  # Get today's date in YYYY-MM-DD format
+    cursor = mysql.connection.cursor()
+
+    # Check if an entry exists for today's date
+    cursor.execute("SELECT last_counter FROM invoice_numbers WHERE date = %s", (current_date,))
+    result = cursor.fetchone()
+
+    if result:
+        # Increment the counter for today
+        last_counter = result[0] + 1
+        cursor.execute("UPDATE invoice_numbers SET last_counter = %s WHERE date = %s", (last_counter, current_date))
+    else:
+        # No entry for today, so start with counter 1
+        last_counter = 1
+        cursor.execute("INSERT INTO invoice_numbers (date, last_counter) VALUES (%s, %s)", (current_date, last_counter))
+
+    mysql.connection.commit()
+    cursor.close()
+
+    # Format the invoice number (UNB-YYYYMMDD-XXXX)
+    invoice_number = f"UNB-{datetime.now().strftime('%Y%m%d')}-{last_counter:04d}"
+    return invoice_number
+
 
 def log_event(user_id, event, metadata=None):
     cursor = mysql.connection.cursor()
@@ -48,53 +74,86 @@ def log_event(user_id, event, metadata=None):
     cursor.execute(query, (user_id, event, metadata))
     mysql.connection.commit()
     cursor.close()
-    
+
 @app.route('/purchase', methods=['POST'])
 def handle_purchase():
     data = request.get_json()
 
-    # Check if data is a list (multiple purchases)
-    if isinstance(data, list):
-        for item in data:
-            user_id = item.get('userId')
-            book_id = item.get('bookId')
-            price = item.get('price')
-            payment_method = item.get('paymentMethod')
-            date_purchased = datetime.now()
+    # Extract user and purchase data
+    customer_name = data.get('customer_name')
+    address = data.get('address')
+    date = data.get('date')
+    purchasedDetails = data.get('purchasedDetails')
+    purchases = data.get('purchases')  # List of books (book_code, quantity, unit_price, total_price)
+    method = data.get('method')  # Payment method (type, account_name, account_number, pay_by)
+    print(method)
+    # Generate an invoice number
+    invoice_number = generate_invoice_number()  # Ensure this function exists
+    
+    # Save purchases to the database
+    try:
+        cursor = mysql.connection.cursor()
 
-            try:
-                cursor = mysql.connection.cursor()
+        if isinstance(purchasedDetails, list):
+            # Handle multiple purchases
+            for item in purchasedDetails:
+                user_id = item.get('userId')
+                book_id = item.get('bookId')
+                price = item.get('price')
+                payment_method = item.get('paymentMethod')
+                date_purchased = datetime.now()
+
                 cursor.execute(
                     "INSERT INTO purchases (userId, bookId, price, paymentMethod, datePurchased) VALUES (%s, %s, %s, %s, %s)",
                     (user_id, book_id, price, payment_method, date_purchased)
                 )
-                mysql.connection.commit()
-                cursor.close()
-            except Exception as e:
-                print(f"Error inserting purchase data: {e}")
-                return jsonify({'error': 'Failed to store purchase data'}), 500
 
-        return jsonify({"message": "All purchases recorded successfully!"}), 200
-    else:
-        # Handle a single purchase
-        user_id = data.get('userId')
-        book_id = data.get('bookId')
-        price = data.get('price')
-        payment_method = data.get('paymentMethod')
-        date_purchased = datetime.now()
+        else:
+            # Handle a single purchase
+            user_id = purchasedDetails.get('userId')
+            book_id = purchasedDetails.get('bookId')
+            price = purchasedDetails.get('price')
+            payment_method = purchasedDetails.get('paymentMethod')
+            date_purchased = datetime.now()
 
-        try:
-            cursor = mysql.connection.cursor()
             cursor.execute(
                 "INSERT INTO purchases (userId, bookId, price, paymentMethod, datePurchased) VALUES (%s, %s, %s, %s, %s)",
                 (user_id, book_id, price, payment_method, date_purchased)
             )
-            mysql.connection.commit()
-            cursor.close()
-            return jsonify({"message": "Purchase recorded successfully!"}), 200
-        except Exception as e:
-            print(f"Error inserting purchase data: {e}")
-            return jsonify({'error': 'Failed to store purchase data'}), 500
+
+        # Commit the transaction
+        mysql.connection.commit()
+        cursor.close()
+
+    except Exception as e:
+        print(f"Error inserting purchase data: {e}")
+        return jsonify({'error': 'Failed to store purchase data'}), 500
+
+    # Generate the invoice PDF
+    pdf_buffer = BytesIO()
+
+    try:
+        generate_invoice(
+            customer_name=customer_name,
+            address=address,
+            date=date,
+            purchases=purchases,
+            method=method,
+            output_filename=pdf_buffer,  # Write directly to BytesIO object
+            invoice_number=invoice_number,
+            logo_path=None,  # Set your logo path here if available
+            stylish_ub_path=r"uni2.png"
+        )
+    except Exception as e:
+        print(f"Error generating invoice: {e}")
+        return jsonify({'error': 'Failed to generate invoice'}), 500
+
+    pdf_buffer.seek(0)  # Set the file pointer to the beginning
+    try:
+        return send_file(pdf_buffer, as_attachment=True, download_name=f"{invoice_number}.pdf", mimetype='application/pdf')
+    except Exception as e:
+        print(f"Error sending invoice: {e}")
+        return jsonify({'error': 'Failed to send invoice'}), 500
 
 
 @app.route('/user/purchases', methods=['GET'])
