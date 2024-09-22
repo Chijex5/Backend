@@ -150,7 +150,7 @@ def handle_purchase():
 
     pdf_buffer.seek(0)  # Set the file pointer to the beginning
     try:
-        return send_file(pdf_buffer, as_attachment=True, download_name=f"{invoice_number}.pdf", mimetype='application/pdf')
+        return send_file(pdf_buffer, as_attachment=True, download_name=f"invoice{invoice_number}.pdf", mimetype='application/pdf')
     except Exception as e:
         print(f"Error sending invoice: {e}")
         return jsonify({'error': 'Failed to send invoice'}), 500
