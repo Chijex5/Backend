@@ -33,7 +33,7 @@ mysql = MySQL(app)
 
 # Secret Key
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-count = 570
+count = 1408
 
 @app.route('/', methods=['GET'])
 def home():
