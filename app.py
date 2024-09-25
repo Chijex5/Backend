@@ -328,6 +328,34 @@ def check_user():
         log_event(user_id, 'error', str(e))
         return jsonify({'error': str(e)}), 500
 
+@app.route('/profileavatar', methods=['PUT'])
+def profile_avatar():
+    try:
+        data = request.get_json()
+        user_id = data.get('userId')
+        if not user_id:
+            return jsonify({'error': 'User ID is required'}), 400
+        
+        profile_url = data.get('profileUrl', '')
+        cursor = mysql.connection.cursor()
+
+        
+        cursor.execute("""
+            UPDATE users
+            SET profileUrl = %s
+            WHERE userId = %s
+        """, (profile_url, user_id))
+
+        mysql.connection.commit()
+        cursor.close()
+        log_event(user_id, 'Update', 'Created User Profile Avatar')
+
+        return jsonify({'message': 'User data updated successfully'}), 200
+
+    except Exception as e:
+        print(e)
+        log_event(user_id, 'error', str(e))
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/updateuser', methods=['PUT'])
