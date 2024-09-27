@@ -33,7 +33,7 @@ mysql = MySQL(app)
 
 # Secret Key
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-count = 1408
+count = 1850
 
 @app.route('/', methods=['GET'])
 def home():
@@ -270,27 +270,6 @@ def login():
             cursor.close()
             log_event(user_id, 'login', 'User logged in successfully')
             return jsonify(response), 200
-        else:
-            # User not found, create a new user
-            cursor.execute(
-                "INSERT INTO users (userId, email, username, level, profileUrl, address, phone, department) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                (user_id, email, username, "", profile_url, "", "", "")
-            )
-            mysql.connection.commit()
-
-            response = {
-                'name': username,
-                'level': "",
-                'profileUrl': profile_url,
-                'address': "",
-                'phone': "",
-                'department': "",
-                'email': email
-            }
-            cursor.close()
-            log_event(user_id, 'login', 'New User created successfully')
-            return jsonify(response), 201  # 201 Created
-
     except Exception as e:
         print(e)
         return jsonify({'error': str(e)}), 500
