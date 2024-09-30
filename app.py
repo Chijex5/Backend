@@ -33,7 +33,7 @@ mysql = MySQL(app)
 
 # Secret Key
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-count = 1850
+count = 2260
 
 @app.route('/', methods=['GET'])
 def home():
@@ -248,7 +248,7 @@ def login():
             return jsonify({'error': 'Email is required'}), 400
 
         cursor = mysql.connection.cursor()
-        cursor.execute("SELECT username, level, profileUrl, address, phone, department,flatno, street, city, state, postalcode FROM users WHERE email = %s", (email,))
+        cursor.execute("SELECT username, level, profileUrl, address, phone, department,flatno, street, city, state, postalcode, haswelcomed FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
 
         if user:
@@ -264,6 +264,7 @@ def login():
                 'city': user[8] or "",
                 'state': user[9] or "",
                 'postal_code': user[10] or "",
+                'haswelcomed': user[11] or False,
                 'email': email,
                 'userId': user_id
             }
