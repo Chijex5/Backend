@@ -35,13 +35,28 @@ mysql = MySQL(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 count = 226000
 
+count_file = 'count.txt'
+
+def get_count():
+    try:
+        with open(count_file, 'r') as file:
+            return int(file.read())
+    except FileNotFoundError:
+        return 226000  # Initial count
+    except ValueError:
+        return 226000
+
+def save_count(count):
+    with open(count_file, 'w') as file:
+        file.write(str(count))
+
 @app.route('/', methods=['GET'])
 def home():
-    global count  # Declare count as global
-    count += 1
+    global count
+    count = get_count() + 1
+    save_count(count)
     message = f'Welcome to the Uniboks Backend API! This is for testing our API. We have made {count} successful calls.'
     return jsonify({'message': message}), 200
-
 
 def generate_invoice_number():
     current_date = datetime.now().strftime('%Y-%m-%d')  # Get today's date in YYYY-MM-DD format
