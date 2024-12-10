@@ -92,26 +92,60 @@ def log_event(user_id, event, metadata=None):
 
 @app.route('/purchase', methods=['POST'])
 def handle_purchase():
-    data = request.get_json()
+    print("Received request at /purchase endpoint.")
+    
+    # Step 1: Get JSON payload
+    try:
+        data = request.get_json()
+        print(f"Request JSON data: {data}")
+    except Exception as e:
+        print(f"Error parsing JSON: {e}")
+        return jsonify({'error': 'Invalid JSON format'}), 400
+    
+    # Step 2: Extract and validate required fields
+    required_fields = ['customer_name', 'address', 'date', 'purchasedDetails', 'purchases', 'method']
+    for field in required_fields:
+        if field not in data:
+            print(f"Missing required field: {field}")
+            return jsonify({'error': f"Missing required field: {field}"}), 400
 
-    # Extract user and purchase data
     customer_name = data.get('customer_name')
     address = data.get('address')
     date = data.get('date')
     purchasedDetails = data.get('purchasedDetails')
-    purchases = data.get('purchases')  # List of books (book_code, quantity, unit_price, total_price)
-    method = data.get('method')  # Payment method (type, account_name, account_number, pay_by)
-    print(method)
+    purchases = data.get('purchases')
+    method = data.get('method')
+
+    print(f"Extracted Data -> Customer Name: {customer_name}, Address: {address}, Date: {date}")
+    print(f"Purchased Details: {purchasedDetails}")
+    print(f"Purchases: {purchases}")
+    print(f"Method: {method}")
+
+    # Step 3: Validate extracted fields
+    if not isinstance(purchasedDetails, (list, dict)):
+        print("Invalid type for purchasedDetails. Must be list or dict.")
+        return jsonify({'error': 'Invalid type for purchasedDetails. Must be list or dict.'}), 400
+
+    if not isinstance(purchases, list):
+        print("Invalid type for purchases. Must be list.")
+        return jsonify({'error': 'Invalid type for purchases. Must be list.'}), 400
+
     # Generate an invoice number
-    invoice_number = generate_invoice_number()  # Ensure this function exists
-    
-    # Save purchases to the database
+    try:
+        invoice_number = generate_invoice_number()
+        print(f"Generated Invoice Number: {invoice_number}")
+    except Exception as e:
+        print(f"Error generating invoice number: {e}")
+        return jsonify({'error': 'Failed to generate invoice number'}), 500
+
+    # Step 4: Save purchases to the database
     try:
         cursor = mysql.connection.cursor()
+        print("Connected to the database.")
 
         if isinstance(purchasedDetails, list):
-            # Handle multiple purchases
             for item in purchasedDetails:
+                print(f"Inserting item: {item}")
                 user_id = item.get('userId')
                 book_id = item.get('bookId')
                 price = item.get('price')
@@ -122,9 +156,8 @@ def handle_purchase():
                     "INSERT INTO purchases (userId, bookId, price, paymentMethod, datePurchased) VALUES (%s, %s, %s, %s, %s)",
                     (user_id, book_id, price, payment_method, date_purchased)
                 )
-
         else:
-            # Handle a single purchase
+            print(f"Inserting single purchase: {purchasedDetails}")
             user_id = purchasedDetails.get('userId')
             book_id = purchasedDetails.get('bookId')
             price = purchasedDetails.get('price')
@@ -136,44 +169,47 @@ def handle_purchase():
                 (user_id, book_id, price, payment_method, date_purchased)
             )
 
-        # Commit the transaction
         mysql.connection.commit()
         cursor.close()
-
+        print("Successfully inserted purchase data.")
     except Exception as e:
         print(f"Error inserting purchase data: {e}")
         return jsonify({'error': 'Failed to store purchase data'}), 500
 
-    # Generate the invoice PDF
+    # Step 5: Generate the invoice PDF
     pdf_buffer = BytesIO()
-
     try:
+        print("Generating invoice...")
         generate_invoice(
             customer_name=customer_name,
             address=address,
             date=date,
             purchases=purchases,
             method=method,
-            output_filename=pdf_buffer,  # Write directly to BytesIO object
+            output_filename=pdf_buffer,
             invoice_number=invoice_number,
-            logo_path=None,  # Set your logo path here if available
+            logo_path=None,
             stylish_ub_path=r"uni2.png"
         )
+        print("Invoice generated successfully.")
     except Exception as e:
         print(f"Error generating invoice: {e}")
         return jsonify({'error': 'Failed to generate invoice'}), 500
 
-    pdf_buffer.seek(0)  # Set the file pointer to the beginning
+    # Step 6: Send the invoice as a PDF
     try:
+        pdf_buffer.seek(0)
+        print("Sending invoice to client...")
         return send_file(
-    pdf_buffer, 
-    as_attachment=True, 
-    download_name=f"invoice{invoice_number}.pdf",  # Correct file name
-    mimetype='application/pdf'
+            pdf_buffer, 
+            as_attachment=True, 
+            download_name=f"invoice{invoice_number}.pdf",
+            mimetype='application/pdf'
         )
     except Exception as e:
         print(f"Error sending invoice: {e}")
         return jsonify({'error': 'Failed to send invoice'}), 500
+        
 @app.route('/user/purchases', methods=['GET'])
 def get_purchase_summary():
     user_id = request.args.get('userId')  # Get the userId from query params
