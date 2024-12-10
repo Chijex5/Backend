@@ -171,6 +171,9 @@ def handle_purchase():
     download_name=f"invoice{invoice_number}.pdf",  # Correct file name
     mimetype='application/pdf'
         )
+    except Exception as e:
+        print(f"Error sending invoice: {e}")
+        return jsonify({'error': 'Failed to send invoice'}), 500
 @app.route('/user/purchases', methods=['GET'])
 def get_purchase_summary():
     user_id = request.args.get('userId')  # Get the userId from query params
