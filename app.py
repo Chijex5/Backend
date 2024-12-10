@@ -165,12 +165,12 @@ def handle_purchase():
 
     pdf_buffer.seek(0)  # Set the file pointer to the beginning
     try:
-        return send_file(pdf_buffer, as_attachment=True, download_name=f"invoice{invoice_number}.pdf", mimetype='application/pdf')
-    except Exception as e:
-        print(f"Error sending invoice: {e}")
-        return jsonify({'error': 'Failed to send invoice'}), 500
-
-
+        return send_file(
+    pdf_buffer, 
+    as_attachment=True, 
+    download_name=f"invoice{invoice_number}.pdf",  # Correct file name
+    mimetype='application/pdf'
+        )
 @app.route('/user/purchases', methods=['GET'])
 def get_purchase_summary():
     user_id = request.args.get('userId')  # Get the userId from query params
