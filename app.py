@@ -203,6 +203,7 @@ def handle_purchase():
         response = send_file(
             pdf_buffer, 
             as_attachment=True, 
+            download_name=f"invoice{invoice_number}.pdf",
             mimetype='application/pdf'
         )
         response.headers['Content-Disposition'] = f'attachment; filename="invoice{invoice_number}.pdf"'
