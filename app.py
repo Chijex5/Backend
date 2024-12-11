@@ -476,6 +476,7 @@ def get_books():
         # If the user has a purchase history, recommend books
         if not purchases_df.empty:
             data = purchases_df.merge(books_df, left_on='bookId', right_on='id')
+            print(data)
             processed_data, _ = preprocess_data(data)
             recommended_book_ids = get_recommendations(int(user_id), processed_data)
             recommended_books = books_df[books_df['id'].isin(recommended_book_ids)]
