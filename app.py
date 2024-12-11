@@ -6,7 +6,7 @@ from flask_mysqldb import MySQL
 from invoice_generator import generate_invoice
 from io import BytesIO
 from flask_cors import CORS
-qfrom Model import preprocess_data, get_recommendations
+from Model import preprocess_data, get_recommendations
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
