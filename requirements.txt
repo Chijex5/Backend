@@ -4,6 +4,7 @@ Flask-Cors==3.0.10
 Werkzeug==2.0.2
 pyjwt==2.3.0
 mysqlclient==2.0.3
+mysql-connector-python
 gunicorn==20.1.0
 Flask-Mail==0.9.1
 python-dotenv==1.0.0
