@@ -7,7 +7,7 @@ from flask_mysqldb import MySQL
 from invoice_generator import generate_invoice
 from io import BytesIO
 from flask_cors import CORS
-from Model import preprocess_data, get_recommendations
+from Model import get_recommendation
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -465,20 +465,7 @@ def get_books():
         cursor.execute("SELECT * FROM books ORDER BY id DESC LIMIT 10")
         recent_choices = cursor.fetchall()
 
-        # Fetch user purchase history
-        cursor.execute("SELECT * FROM purchases WHERE userId = %s", (user_id,))
-        purchases = cursor.fetchall()
-
-        # Format data as DataFrames for the model
-        books_df = pd.DataFrame(department_books + recent_choices, columns=['id', 'title', 'author', 'price', 'department', 'views', 'rating'])
-        purchases_df = pd.DataFrame(purchases, columns=['userId', 'bookId', 'rating'])
-
-        # If the user has a purchase history, recommend books
-        if not purchases_df.empty:
-            data = purchases_df.merge(books_df, left_on='bookId', right_on='id')
-            print(data)
-            processed_data, _ = preprocess_data(data)
-            recommended_book_ids = get_recommendations(int(user_id), processed_data)
+            recommended_book_ids = get_recommendation((user_id))
             recommended_books = books_df[books_df['id'].isin(recommended_book_ids)]
 
             recommendations = recommended_books.to_dict(orient='records')
