@@ -497,14 +497,6 @@ def get_books():
         }
 
         return response
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return {"error": "An unexpected error occurred"}, 500
-
-    finally:
-        cursor.close()
-
         return jsonify(response), 200
     except Exception as e:
         print(f"Error: {str(e)}")
