@@ -477,7 +477,7 @@ def get_recommendations():
         print(f"User ID: {user_id}")
         recommended_books = get_recommendation(user_id)
         return jsonify(recommended_books), 200
-    except Exception as e
+    except Exception as e:
         print(f"Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
