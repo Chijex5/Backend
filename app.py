@@ -441,7 +441,11 @@ def update_user():
 @app.route('/getbooks', methods=['GET'])
 def get_books():
     try:
+        # Fetch `userId` from request
         user_id = request.args.get('userId')
+        if not user_id:
+            return {"error": "userId is required"}, 400
+
         cursor = mysql.connection.cursor()
 
         print(f"User ID: {user_id}")
@@ -449,13 +453,12 @@ def get_books():
         # Fetch the department associated with the user
         cursor.execute("SELECT department FROM users WHERE userId = %s", (user_id,))
         department = cursor.fetchone()
+        department_name = department[0] if department else None
 
-        print(f"Department: {department}")
+        print(f"Department: {department_name}")
 
-        if department:
-            department_name = department[0]
-
-            # Fetch books from the user's department
+        # Fetch books related to the user's department
+        if department_name:
             cursor.execute("SELECT * FROM books WHERE department = %s", (department_name,))
             department_books = cursor.fetchall()
         else:
@@ -465,19 +468,42 @@ def get_books():
         cursor.execute("SELECT * FROM books ORDER BY id DESC LIMIT 10")
         recent_choices = cursor.fetchall()
 
-            recommended_book_ids = get_recommendation((user_id))
-            recommended_books = books_df[books_df['id'].isin(recommended_book_ids)]
+        # Fetch all books for creating a DataFrame
+        cursor.execute("SELECT * FROM books")
+        books_data = cursor.fetchall()
 
+        # Define column names for the books DataFrame
+        cursor.execute("SHOW COLUMNS FROM books")
+        columns = [column[0] for column in cursor.fetchall()]
+        books_df = pd.DataFrame(books_data, columns=columns)
+
+        # Fetch recommended book IDs
+        recommended_book_ids = get_recommendation(user_id)
+        print(f"Recommended Book IDs: {recommended_book_ids}")
+
+        # Filter recommended books
+        if not books_df.empty:
+            recommended_books = books_df[books_df['id'].isin(recommended_book_ids)]
             recommendations = recommended_books.to_dict(orient='records')
         else:
-            # Provide general recommendations if no purchase history
+            # Provide general recommendations if no books available
             recommendations = books_df.head(5).to_dict(orient='records')
 
+        # Prepare the response
         response = {
-            'allBooks': department_books,
-            'recentChoices': recent_choices,
-            'recommendations': recommendations
+            "allBooks": department_books,
+            "recentChoices": recent_choices,
+            "recommendations": recommendations,
         }
+
+        return response
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return {"error": "An unexpected error occurred"}, 500
+
+    finally:
+        cursor.close()
 
         return jsonify(response), 200
     except Exception as e:
