@@ -36,8 +36,9 @@ mysql = MySQL(app)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 count = 226000
 
-count_file = 'count.txt'
+route_stats = defaultdict(lambda: {"count": 0, "last_accessed": None})
 
+# Functions for managing total count
 def get_count():
     try:
         with open(count_file, 'r') as file:
@@ -51,13 +52,48 @@ def save_count(count):
     with open(count_file, 'w') as file:
         file.write(str(count))
 
+# Middleware to log route requests and increment total count
+@app.before_request
+def log_route_and_increment_count():
+    global route_stats
+    # Increment total count
+    total_count = get_count() + 1
+    save_count(total_count)
+
+    # Track route-specific stats
+    route = request.path
+    route_stats[route]["count"] += 1
+    route_stats[route]["last_accessed"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+# Middleware to add total count in response headers
+@app.after_request
+def add_stats_to_response(response):
+    response.headers['X-Total-Request-Count'] = get_count()
+    response.headers['X-Route'] = request.path
+    return response
+
+# Home route
 @app.route('/', methods=['GET'])
 def home():
-    global count
-    count = get_count() + 1
-    save_count(count)
-    message = f'Welcome to the Uniboks Backend API! This is for testing our API. We have made {count} successful calls.'
+    total_count = get_count() + 1
+    save_count(total_count)
+    message = f'Welcome to the Uniboks Backend API! This is for testing our API. We have made {total_count} successful calls.'
     return jsonify({'message': message}), 200
+
+# Stats route
+@app.route('/stats', methods=['GET'])
+def get_stats():
+    total_requests = get_count()
+    return jsonify({
+        "total_requests": total_requests,
+        "routes": {
+            route: {
+                "count": stats["count"],
+                "last_accessed": stats["last_accessed"]
+            }
+            for route, stats in route_stats.items()
+        }
+    })
 
 def generate_invoice_number():
     current_date = datetime.now().strftime('%Y-%m-%d')  # Get today's date in YYYY-MM-DD format
