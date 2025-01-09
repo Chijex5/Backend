@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 from flask import Flask, request, jsonify, send_file
 from flask_mail import Mail
