@@ -36,7 +36,7 @@ mysql = MySQL(app)
 # Secret Key
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 count = 226000
-
+count_file = 'count.txt'
 route_stats = defaultdict(lambda: {"count": 0, "last_accessed": None})
 
 # Functions for managing total count
