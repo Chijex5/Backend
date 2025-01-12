@@ -7,6 +7,7 @@ from surprise.model_selection import train_test_split
 import joblib
 from dotenv import load_dotenv
 import os
+load_dotenv()
 
 # Database connection
 def connect_to_db():
